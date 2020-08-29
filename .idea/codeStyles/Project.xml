@@ -1,0 +1,98 @@
+<component name="ProjectCodeStyleConfiguration">
+  <code_scheme name="Project" version="173">
+    <option name="OTHER_INDENT_OPTIONS">
+      <value>
+        <option name="INDENT_SIZE" value="2" />
+        <option name="TAB_SIZE" value="2" />
+      </value>
+    </option>
+    <option name="IMPORT_LAYOUT_TABLE">
+      <value>
+        <package name="java" withSubpackages="true" static="false" />
+        <package name="javax" withSubpackages="true" static="false" />
+        <package name="scala" withSubpackages="true" static="false" />
+        <package name="play" withSubpackages="true" static="false" />
+        <package name="org" withSubpackages="true" static="false" />
+        <package name="com" withSubpackages="true" static="false" />
+        <package name="" withSubpackages="true" static="false" />
+        <package name="uk" withSubpackages="true" static="false" />
+        <package name="" withSubpackages="true" static="true" />
+      </value>
+    </option>
+    <option name="RIGHT_MARGIN" value="210" />
+    <GroovyCodeStyleSettings>
+      <option name="IMPORT_LAYOUT_TABLE">
+        <value>
+          <package name="java" withSubpackages="true" static="false" />
+          <package name="javax" withSubpackages="true" static="false" />
+          <package name="" withSubpackages="true" static="false" />
+          <package name="com.nowtv" withSubpackages="true" static="false" />
+          <package name="" withSubpackages="true" static="true" />
+          <package name="static com.nowtv" withSubpackages="true" static="false" />
+        </value>
+      </option>
+    </GroovyCodeStyleSettings>
+    <JavaCodeStyleSettings>
+      <option name="IMPORT_LAYOUT_TABLE">
+        <value>
+          <package name="java" withSubpackages="true" static="false" />
+          <package name="javax" withSubpackages="true" static="false" />
+          <package name="scala" withSubpackages="true" static="false" />
+          <package name="play" withSubpackages="true" static="false" />
+          <package name="org" withSubpackages="true" static="false" />
+          <package name="com" withSubpackages="true" static="false" />
+          <package name="" withSubpackages="true" static="false" />
+          <package name="uk" withSubpackages="true" static="false" />
+          <package name="" withSubpackages="true" static="true" />
+        </value>
+      </option>
+    </JavaCodeStyleSettings>
+    <ScalaCodeStyleSettings>
+      <option name="alwaysUsedImports">
+        <array>
+          <option value="cats.implicits._" />
+          <option value="scala.concurrent.ExecutionContext.Implicits.global" />
+        </array>
+      </option>
+      <option name="importLayout">
+        <array>
+          <option value="java" />
+          <option value="scala" />
+          <option value="scalaz" />
+          <option value="akka" />
+          <option value="play" />
+          <option value="all other imports" />
+          <option value="uk" />
+          <option value="parallelai" />
+          <option value="org" />
+          <option value="com" />
+          <option value="com.backwards" />
+        </array>
+      </option>
+    </ScalaCodeStyleSettings>
+    <XML>
+      <option name="XML_LEGACY_SETTINGS_IMPORTED" value="true" />
+    </XML>
+    <codeStyleSettings language="Groovy">
+      <indentOptions>
+        <option name="INDENT_SIZE" value="2" />
+        <option name="CONTINUATION_INDENT_SIZE" value="4" />
+        <option name="TAB_SIZE" value="2" />
+      </indentOptions>
+    </codeStyleSettings>
+    <codeStyleSettings language="JavaScript">
+      <indentOptions>
+        <option name="INDENT_SIZE" value="2" />
+        <option name="CONTINUATION_INDENT_SIZE" value="2" />
+        <option name="TAB_SIZE" value="2" />
+      </indentOptions>
+    </codeStyleSettings>
+    <codeStyleSettings language="Python">
+      <indentOptions>
+        <option name="INDENT_SIZE" value="2" />
+        <option name="CONTINUATION_INDENT_SIZE" value="4" />
+        <option name="TAB_SIZE" value="2" />
+      </indentOptions>
+    </codeStyleSettings>
+  </code_scheme>
+</component>
