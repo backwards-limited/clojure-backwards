@@ -120,7 +120,7 @@
     :indexes {:name {"Lemon" 0, "Coconut" 1}}
   },
   :purchases {
-    :data [{:id 1 :user-id 1 :item "Coconut"} {:id 1 :user-id 2 :item "Lemon"}]
+    :data [{:id 1 :user-id 1 :item "Coconut"} {:id 2 :user-id 2 :item "Lemon"}]
     :indexes {:id {1 0, 2 1}}
   }
 }
@@ -129,4 +129,50 @@
   [table-name]
   (write-db (assoc (read-db) table-name {:data [] :indexes {}})))
 
-(println (create-table "fruits"))
+(println (create-table :clients))
+
+(println (create-table :fruits))
+
+(defn drop-table
+  [table-name]
+  (write-db (dissoc (read-db) table-name)))
+
+(println (drop-table :clients))
+
+(defn insert-original
+  [table-name record id-key]
+  (let [db (read-db)
+        new-db (update-in db [table-name :data] conj record)
+        index (dec (count (get-in new-db [table-name :data])))]
+    (write-db (update-in new-db [table-name :indexes id-key] assoc (id-key record) index))))
+
+(defn select-*
+  [table-name]
+  (get-in (read-db) [table-name :data]))
+
+(defn select-*-where
+  [table-name field field-value]
+  (let [db (read-db)
+        index (get-in db [table-name :indexes field field-value])
+        data (get-in db [table-name :data])]
+    (get data index)))
+
+(defn insert
+  [table-name record id-key]
+
+  (if-let [existing-record (select-*-where table-name id-key (id-key record))]
+    (println (str "Record with " id-key ": " (id-key record) " already exists. Aborting"))
+
+    (let [db (read-db)
+          new-db (update-in db [table-name :data] conj record)
+          index (- (count (get-in new-db [table-name :data])) 1)]
+
+      (write-db
+        (update-in new-db [table-name :indexes id-key] assoc (id-key record) index)))))
+
+(println (insert :fruits {:name "Apple" :stock 1} :name))
+(println (insert :fruits {:name "Pear" :stock 30} :name))
+
+(println (select-* :fruits))
+
+(println (select-*-where :fruits :name "Pear"))

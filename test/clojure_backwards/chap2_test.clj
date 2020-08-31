@@ -31,3 +31,16 @@
     (let [updated-db (sell gemstone-db :moissanite 123)]
       (is (= 44 (get-in updated-db [:moissanite :stock])))
       (is (= 123 (last (get-in updated-db [:moissanite :sales])))))))
+
+(deftest im-memory-database-test
+  (testing "Create table and drop"
+    (write-db {})
+    (let [db (create-table :clients)]
+      (is (= db {:clients {:data [], :indexes {}}})))
+    (let [db (drop-table :clients)]
+      (is (= db {}))))
+  (testing "Create table and insert"
+    (create-table :fruits)
+    (insert :fruits {:name "Apricot" :stock 30} :name)
+    (insert :fruits {:name "Grapefruit" :stock 6} :name)
+    (is (= 2 (count (get-in (read-db) [:fruits :data]))))))
