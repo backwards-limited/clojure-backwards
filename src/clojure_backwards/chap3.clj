@@ -162,16 +162,185 @@
 
 ; Function arity
 
-(def weapon-damage {:fists 10 :staff 35 :sword 100 :cast-iron-saucepan 150})
+(def weapon-damage {:fists 10.0 :staff 35.0 :sword 100.0 :cast-iron-saucepan 150.0})
 
-(defn strike
-  ([enemy] (strike enemy :fists))
+(defn strike-org
+  ([enemy] (strike-org enemy :fists))
   ([enemy weapon]
    (let [damage (weapon weapon-damage)]
      (update enemy :health - damage))))
 
-(println (strike {:hame "noob" :health 100}))
+(println (strike-org {:hame "noob" :health 100}))
 
-(println (strike {:hame "noob" :health 100} :sword))
+(println (strike-org {:hame "noob" :health 100} :sword))
 
-(println (strike {:hame "noob" :health 100} :cast-iron-saucepan))
+(println (strike-org {:hame "noob" :health 100} :cast-iron-saucepan))
+
+
+; Variadic functions
+
+(defn welcome
+  [player & friends]
+  (println (str "Welcome to the Parenthmazes " player "!"))
+  (when (seq friends)
+    (println (str "Sending " (count friends) " friend request(s) to the following players: " (clojure.string/join ", " friends)))))
+
+(welcome "Jon")
+
+(welcome "Jon" "Arya" "Tyrion" "Petyr")
+
+(defn welcome2
+  ([player]
+   (println (str "Welcome to Parentmazes (single-player mode), " player "!")))
+
+  ([player & friends]
+   (println (str "Welcome to Parenthmazes (multi-player mode), " player "!"))
+   (println (str "Sending " (count friends) " friend request(s) to the following players: " (clojure.string/join ", " friends)))))
+
+
+; New version of strike
+
+; The target entity can contain an :armor key, which contains a coefficient used to calculate the final amount of damage.
+; The bigger the number, the better the armor.
+; For example, an armor value of 0.8 for a strike of 100 points results in 20 damage points being inflicted.
+; An armor value of 0.1 results in 90 damage points being inflicted,
+; 0 means no armor,
+; and 1 means invincible.
+
+(defn strike
+  ([target weapon]
+   (let [points (weapon weapon-damage)]
+     (if (= :gnomes (:camp target))
+       (update target :health + points)
+
+       (let [armor (or (:armor target) 0)
+             damage (* points (- 1 armor))]
+         (update target :health - damage))))))
+
+(def enemy {:name "Zulkaz" :health 250 :camp :trolls})
+
+(println (strike enemy :sword))
+
+(def ally {:name "Carla" :health 80 :camp :gnomes})
+
+(println (strike ally :staff))
+
+(def armored-enemy {:name "Zulkaz" :health 250 :armor 0.8 :camp :trolls})
+
+(println (strike armored-enemy :sword))
+
+; Now we would like to use our associative destructuring technique to retrieve the camp and armor values directly
+; from the function parameters, and reduce the amount of code in the function's body.
+; The only problem we have is that we still need to return an updated version of the target entity,
+; but how could we both destructure the target entity and keep a reference of the target parameter?
+; Clojure has your back – you can use the special key :as to bind the destructured map to a specific name.
+
+(defn strike
+  "With one argument, strike a target with a default :fists `weapon`.
+   With two argument, strike a target with `weapon`.
+   Strike will heal a target that belongs to the gnomes camp."
+  ([target] (strike target :fists))
+  ([{:keys [camp armor] :or {armor 0} :as target} weapon]
+   (let [points (weapon weapon-damage)]
+     (if (= :gnomes camp)
+       (update target :health + points)
+       (let [damage (* points (- 1 (or armor)))]
+         (update target :health - damage))))))
+
+
+; More indepth using "partial functions", "function composition" and "dispatch tables".
+
+; Note:
+; We want our sword weapon to simply subtract 100 points, but there is an issue with partial:
+; ((partial - 100) 150) gives -50
+; because the function call is equivalent to (- 100 150) and not what we want which is (- 150 100)
+; So instead of a partial function we resort to an anonymous function
+
+(def weapon-fn-map {
+  :fists (fn [health] (if (< health 100) (- health 10) health))
+  :staff (partial + 35)
+  :sword #(- % 100)
+  :cast-iron-saucepan #(- % 100 (rand-int 50))
+  :sweet-potato identity
+})
+
+(println ((weapon-fn-map :fists) 150))
+
+(println ((weapon-fn-map :fists) 50))
+
+(println ((weapon-fn-map :staff)))
+
+(println ((weapon-fn-map :staff) 150))
+
+(println ((weapon-fn-map :sword) 150))
+
+(println ((weapon-fn-map :cast-iron-saucepan) 200))
+
+(defn strike2
+  "With one argument, strike a target with a default :fists `weapon`.
+  With two arguments, strike a target with `weapon` and return the target entity"
+  ([target]
+   (strike2 target :fists))
+  ([target weapon]
+   (let [weapon-fn (weapon weapon-fn-map)]
+     (update target :health weapon-fn))))
+
+(def arnold {:name "Arnold" :health 250})
+
+(println (strike2 arnold :sweet-potato))
+
+(println (strike2 arnold :cast-iron-saucepan))
+
+; If we want to strike with more than one weapon, we could do the following, but next we'll improve by using composition
+(println (strike2 (strike2 arnold :sword) :staff))
+
+(println (update arnold :health (comp (:sword weapon-fn-map) (:fists weapon-fn-map))))
+
+; We can strike with all weapons.
+; Remember, to pass each element of a collection as a parameter of a function, we can use apply.
+
+(defn mighty-strike
+  "Strike a `target` with all weapons"
+  [target]
+  (let [weapon-fn (apply comp (vals weapon-fn-map))]
+    (update target :health weapon-fn)))
+
+(println (mighty-strike arnold))
+
+; Let's now strike using multimethods and pass in the weapon HashMap
+
+(defmulti strike (fn [m] (get m :weapon)))
+
+(defmulti strike :weapon)
+
+; Handle differently for when health is below 50 by striking all the way down to 0
+; We need to uncomment the following and comment out the 2 above
+;(defmulti strike
+;  (fn [{{:keys [:health]} :target weapon :weapon}]
+;    (if (< health 50) :finisher weapon)))
+
+(defmethod strike :finisher [_] 0)
+
+(defmethod strike :sword
+  [{{:keys [:health]} :target}]
+  (- health 100))
+
+(defmethod strike :cast-iron-saucepan
+  [{{:keys [:health]} :target}]
+  (- health 100 (rand-int 50)))
+
+(println (strike {:weapon :sword :target {:health 200}}))
+
+(println (strike {:weapon :cast-iron-saucepan :target {:health 200}}))
+
+(defmethod strike :default
+  [{{:keys [:health]} :target}]
+  health)
+
+(println (strike {:weapon :spoon :target {:health 200}}))
+
+; Call with health 50 and above
+(println (strike {:weapon :sword :target {:health 200}}))
+
+; Call with health below 50 - Comment out the above "strike" functions and we should get 0
+(println (strike {:weapon :spoon :target {:health 30}}))

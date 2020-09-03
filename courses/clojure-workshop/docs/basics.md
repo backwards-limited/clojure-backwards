@@ -366,3 +366,17 @@ The JavaScript version could be reduced but new syntax is required e.g. an "inli
   (println (if (or (<= 1 x 100) (= 0 (mod x 100))) "Valid" "Invalid")))
 ```
 
+## Source Code
+
+We can view Clojure source code e.g.
+
+```clojure
+(source identity)
+(defn identity
+  "Returns its argument."
+  {:added "1.0"
+   :static true}
+  [x] x)
+=> nil
+```
+
