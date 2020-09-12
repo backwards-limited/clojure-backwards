@@ -9,4 +9,5 @@
 - [Functions](docs/functions.md)
 - [Higher Order Functions](docs/higher-order-functions.md)
 - [Mapping & Filtering](docs/mapping-filtering.md)
+- [Reducing](docs/reducing.md)
 

@@ -25,13 +25,68 @@
 
 (println (five-matches "match_scores_1991-2016_unindexed_csv.csv"))
 
-; To use the :winner_sets_won and :loser_sets_won fields in a calculation of some kind, we need to cast them as integers first.
-; Use the cast-with function of semantic-csv:
-(defn five-matches-int-sets [csv]
+(defn federer-wins [csv]
   (with-open [r (io/reader csv)]
     (->> (csv/read-csv r)
-         (map #(select-keys % [:tourney_year_id :winner_name :loser_name :winner_sets_won :loser_sets_won]))
-         #(update % :winner_sets_won cast Integer)
-         #(update % :loser_sets_won cast Integer))))
+         sc/mappify
+         (filter #(= "Roger Federer" (:winner_name %)))
+         (map #(select-keys % [:winner_name
+                               :loser_name
+                               :winner_sets_won
+                               :loser_sets_won
+                               :winner_games_won
+                               :loser_games_won
+                               :tourney_year_id
+                               :tourney_slug]))
+         doall)))
 
-(println (five-matches-int-sets "match_scores_1991-2016_unindexed_csv.csv"))
+(println (take 3 (federer-wins "match_scores_1991-2016_unindexed_csv.csv")))
+
+(defn match-query [csv pred]
+  (with-open [r (io/reader csv)]
+    (->> (csv/read-csv r)
+         sc/mappify
+         (filter pred)
+         (map #(select-keys % [:winner_name
+                               :loser_name
+                               :winner_sets_won
+                               :loser_sets_won
+                               :winner_games_won
+                               :loser_games_won
+                               :tourney_year_id
+                               :tourney_slug]))
+         doall)))
+
+; Predicate searching for all Federer's matches, wins and loses
+#(or (= "Roger Federer" (:winner_name %))
+     (= "Roger Federer" (:loser_name %)))
+
+; We could also use a "set" as a predicate
+#((hash-set (:winner_name %) (:loser_name %)) "Roger Federer")
+; First, we define a set that includes the :winner_name and :loser_name fields and then we ask: is Roger Federer a member of that set?
+; Note, we've written hash-set here instead of using the literal notation, #{…}, to avoid confusion with the #(…) of the anonymous function.
+
+(def federer #((hash-set (:winner_name %) (:loser_name %)) "Roger Federer"))
+
+(println (count (match-query "match_scores_1991-2016_unindexed_csv.csv" federer)))
+
+
+; Federer vs Nadal
+
+; Predicate for all matches between these 2 players.
+
+; First attempt
+#(and
+   (or (= (:winner_name %) "Roger Federer")
+       (= (:winner_name %) "Rafael Nadal"))
+   (or (= (:loser_name %)  "Roger Federer")
+       (= (:loser_name %)  "Rafael Nadal")))
+
+; Second attempt
+#(= (hash-set (:winner_name %) (:loser_name %))
+    #{"Roger Federer" "Rafael Nadal"})
+; We don't care about the order, or which one is the winner or loser.
+
+(println (take 3 (match-query "match_scores_1991-2016_unindexed_csv.csv"
+                              #(= (hash-set (:winner_name %) (:loser_name %))
+                                  #{"Roger Federer" "Rafael Nadal"}))))
