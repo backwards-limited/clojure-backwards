@@ -2,6 +2,8 @@
 
 (require '[clojure.pprint :as pp])
 
+(require '[clojure-backwards.serena-williams :as sw])
+
 (def weather-days [{
   :max 31
   :min 27
@@ -179,3 +181,197 @@
     :calculated
 
     reverse))
+
+; There is more destructuring for easy access to the distance and elevation values inside the incoming tuple.
+; The entire call to reduce is wrapped inside a -> threading macro.
+; This is, of course, equivalent to (reverse (:calculated (reduce…)))
+; but has the advantage of organizing the code according to how the data flows through the function.
+
+; We will need to know whether the new position is on the same slope as the positions stored in current.
+; Are we still going up, or down, or have we gone over a peak, or across the lowest part of a valley?
+(defn same-slope-as-current? [current elevation]
+  (or (= 1 (count current))
+      (let [[[_ next-to-last] [_ the-last]] (take-last 2 current)]
+        (or (>= next-to-last the-last elevation)
+            (<= next-to-last the-last elevation)))))
+
+; When we have at least two items, we can do some destructuring.
+; This destructuring is doubly nested:
+; first, we take the last two elements in current, using the take-last function,
+; and then we extract and name the second part of those tuples.
+
+; Now we have three values and we want to see whether they are either all increasing or all decreasing.
+
+(println (same-slope-as-current? [[1 5] [2 10]] 15))
+
+(println (same-slope-as-current? [[1 5] [2 10]] 5))
+
+(println (same-slope-as-current? [[1 5]] 10))
+
+(println (same-slope-as-current? [[1 5] [2 10] [3 15]] 20))
+
+(fn [{:keys [current] :as acc} [distance elevation :as this-position]]
+  (cond (empty? current)
+        {:current [this-position]
+         :calculated [{:race-position distance
+                       :elevation elevation
+                       :distance-to-next 0
+                       :elevation-to-next 0}]}
+
+        (same-slope-as-current? current elevation)
+        (-> acc
+            (update :current conj this-position)
+            (update :calculated
+                    conj
+                    {:race-position distance
+                     :elevation elevation
+                     :distance-to-next (- (first (first current)) distance)
+                     :elevation-to-next (- (second (first current)) elevation)}))
+
+        :otherwise-slope-change
+        (let [[prev-distance prev-elevation :as peak-or-valley] (last current)]
+          (-> acc
+              (assoc :current [peak-or-valley this-position])
+              (update :calculated
+                      conj
+                      {:race-position distance
+                       :elevation elevation
+                       :distance-to-next (- prev-distance distance)
+                       :elevation-to-next (- prev-elevation elevation)})))))
+
+; Placing the above function in distances-elevation-to-next-peak-or-valley, we now have:
+(defn distances-elevation-to-next-peak-or-valley
+  [data]
+  (->
+    (reduce
+      (fn [{:keys [current] :as acc} [distance elevation :as this-position]]
+        (cond (empty? current)
+              {:current [this-position]
+               :calculated [{:race-position distance
+                             :elevation elevation
+                             :distance-to-next 0
+                             :elevation-to-next 0}]}
+              (same-slope-as-current? current elevation)
+              (-> acc
+                  (update :current conj this-position)
+                  (update :calculated
+                          conj
+                          {:race-position distance
+                           :elevation elevation
+                           :distance-to-next (- (first (first current)) distance)
+                           :elevation-to-next (- (second (first current)) elevation)}))
+              :otherwise-slope-change
+              (let [[prev-distance prev-elevation :as peak-or-valley] (last current)]
+                (-> acc
+                    (assoc :current [peak-or-valley this-position])
+                    (update :calculated
+                            conj
+                            {:race-position distance
+                             :elevation elevation
+                             :distance-to-next (- prev-distance distance)
+                             :elevation-to-next (- prev-elevation elevation)})))))
+      {:current []
+       :calculated []}
+      (reverse data))
+    :calculated
+    reverse))
+
+(println (distances-elevation-to-next-peak-or-valley distance-elevation))
+
+
+; Exercide - Games of Serena Williams
+(defn streak-string [current-wins current-losses]
+  (cond (pos? current-wins) (str "Won " current-wins)
+        (pos? current-losses) (str "Lost " current-losses)
+        :otherwise "First match of the year"))
+
+(defn serena-williams-win-loss-streaks [matches]
+  (:matches
+    (reduce (fn [{:keys [current-wins current-losses] :as acc}
+                 {:keys [winner-name] :as match}]
+
+              (let [this-match (assoc match :current-streak (streak-string current-wins current-losses))
+                    serena-victory? (= winner-name "Williams S.")]
+                (-> acc
+                    (update :matches #(conj % this-match))
+
+                    (assoc :current-wins (if serena-victory?
+                                           (inc current-wins)
+                                           0))
+
+                    (assoc :current-losses (if serena-victory?
+                                             0
+                                             (inc current-losses))))))
+
+            {:matches []
+             :current-wins 0
+             :current-losses 0}
+
+            matches)))
+
+(println (serena-williams-win-loss-streaks sw/serena-williams-2015))
+
+
+; We have a list of some of the matches that Petra Kvitova played in 2014.
+; Let's suppose you need to be able to quickly access the matches by date.
+; You need to build a map where the keys are dates and the values are the individual matches.
+(def matches
+  [{:winner-name "Kvitova P.",
+    :loser-name "Ostapenko J.",
+    :tournament "US Open",
+    :location "New York",
+    :date "2016-08-29"}
+   {:winner-name "Kvitova P.",
+    :loser-name "Buyukakcay C.",
+    :tournament "US Open",
+    :location "New York",
+    :date "2016-08-31"}
+   {:winner-name "Kvitova P.",
+    :loser-name "Svitolina E.",
+    :tournament "US Open",
+    :location "New York",
+    :date "2016-09-02"}
+   {:winner-name "Kerber A.",
+    :loser-name "Kvitova P.",
+    :tournament "US Open",
+    :location "New York",
+    :date "2016-09-05"}
+   {:winner-name "Kvitova P.",
+    :loser-name "Brengle M.",
+    :tournament "Toray Pan Pacific Open",
+    :location "Tokyo",
+    :date "2016-09-20"}
+   {:winner-name "Puig M.",
+    :loser-name "Kvitova P.",
+    :tournament "Toray Pan Pacific Open",
+    :location "Tokyo",
+    :date "2016-09-21"}])
+
+(map :date matches)
+; Results in:
+; ("2016-08-29" "2016-08-31" ...
+
+(def matches-by-date (zipmap (map :date matches) matches))
+
+; Use the above Map to look up a match by date:
+(println (get matches-by-date "2016-09-20"))
+
+(def dishes [{
+  :name "Carrot Cake"
+  :course :dessert
+} {
+  :name "French Fries"
+  :course :main
+} {
+  :name "Celery"
+  :course :appetizer
+} {
+  :name "Salmon"
+  :course :main
+} {
+  :name "Rice"
+  :course :main
+} {
+  :name "Ice Cream"
+  :course :dessert
+}])

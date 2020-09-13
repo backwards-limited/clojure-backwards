@@ -99,3 +99,85 @@ The reducing function starts with some destructuring to give us easy access to *
 Depending on which branch of the **if** statement we end up in, we update **acc** differently. In the first case, the current integer has the same parity as the contents of **current**. We thread **acc** through two calls to **update**. As you remember from *Chapter 2*, *Data types and Immutability*, **update** takes a function as its second argument, **conj**in this case, because we are adding to the vector, and applies it to the value associated with the key provided as the first value. We add an additional argument, **[n (apply + current)]**. This will be the second argument to **conj**. Altogether, it's as though we were calling **conj** like this: **(conj (:ret acc) [n (apply + current)])**. The second call to **update** adds **n** to our running list of integers.
 
 In the other case, when we are at the beginning of the list or because of a change from odd to even or even to odd, we know that the current total is zero. Instead of **update**, we can use **assoc** here because we're starting over with a fresh list.
+
+## Reducing without Reduce
+
+Clojure's **zipmap** function is a tool for building a map from two sequences. The first sequence becomes the keys for the new map and the second becomes the values.
+
+```clojure
+(zipmap [:a :b :c] [0 1 2])
+=> {:a 0, :b 1, :c 2}
+```
+
+## Maps to Sequences and Back Again
+
+```clojure
+(into {} [[:a 1] [:b 2]])
+=> {:a 1, :b 2}
+```
+
+And vice versa:
+
+```clojure
+(seq {:a 1 :b 2})
+=> ([:a 1] [:b 2])
+```
+
+```clojure
+(def letters-and-numbers {:a 5 :b 18 :c 35})
+=> #'clojure-backwards.chap3/letters-and-numbers
+
+(into {} (map (fn [[k v]] [k (* v 10)]) letters-and-numbers))
+=> {:a 50, :b 180, :c 350}
+```
+
+The **group-by** function takes a sequence, calls a function on each item, and uses whatever the function call returns as a key in a map. The value of the key will be a list of all the items that returned the same key.
+
+```clojure
+(def dishes [{
+  :name "Carrot Cake"
+  :course :dessert
+} {
+  :name "French Fries"
+  :course :main
+} {
+  :name "Celery"
+  :course :appetizer
+} {
+  :name "Salmon"
+  :course :main
+} {
+  :name "Rice"
+  :course :main
+} {
+  :name "Ice Cream"
+  :course :dessert
+}])
+
+(group-by :course dishes)
+=>
+{:dessert [{:name "Carrot Cake", :course :dessert} {:name "Ice Cream", :course :dessert}],
+ :main [{:name "French Fries", :course :main} {:name "Salmon", :course :main} {:name "Rice", :course :main}],
+ :appetizer [{:name "Celery", :course :appetizer}]}
+```
+
+Under the hood, **group-by** uses **reduce** - we could try to write our own, also using **reduce** e.g.
+
+```clojure
+(defn our-group-by [f xs]
+  (reduce (fn [acc x]
+            (update acc (f x) (fn [sublist] (conj (or sublist []) x))))
+          {}
+          xs))
+```
+
+and again:
+
+```clojure
+(our-group-by :course dishes)
+=>
+{:dessert [{:name "Carrot Cake", :course :dessert} {:name "Ice Cream", :course :dessert}],
+ :main [{:name "French Fries", :course :main} {:name "Salmon", :course :main} {:name "Rice", :course :main}],
+ :appetizer [{:name "Celery", :course :appetizer}]}
+```
+
