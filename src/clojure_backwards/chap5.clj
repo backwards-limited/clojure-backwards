@@ -1,8 +1,11 @@
-(ns clojure-backwards.chap5)
-
-(require '[clojure.pprint :as pp])
-
-(require '[clojure-backwards.serena-williams :as sw])
+(ns clojure-backwards.chap5
+  (:require
+    [clojure.pprint :as pp]
+    [clojure-backwards.serena-williams :as sw]
+    [clojure.data.csv :as csv]
+    [clojure.java.io :as io]
+    [semantic-csv.core :as sc]
+    [clojure.math.numeric-tower :as math]))
 
 (def weather-days [{
   :max 31
@@ -375,3 +378,77 @@
   :name "Ice Cream"
   :course :dessert
 }])
+
+
+; Exercise
+(defn tennis-csv->tournament-match-counts [csv]
+  (with-open [r (io/reader csv)]
+    (->> (csv/read-csv r)
+         sc/mappify
+         (group-by :tourney_slug)
+         (map (fn [[k ms]] [k (count ms)]))
+         (into {}))))
+
+(def tournaments (tennis-csv->tournament-match-counts "match_scores_1991-2016_unindexed_csv.csv"))
+
+(println (take 1 tournaments))
+
+(def tournament-totals (tennis-csv->tournament-match-counts "match_scores_1991-2016_unindexed_csv.csv"))
+
+(println (get tournament-totals "chicago"))
+
+
+; Exercise
+; Suppose that for each tennis player, we need to know the number of matches played, won, and lost.
+; We'll walk through two different ways to solve the problem in Clojure (reading a CSV file of matches),
+; the first using reduce and the second using group-by, one of Clojure's many convenient reduce-based functions.
+; NOTE - We will not have to call doall since reduce is not lazy.
+
+; Example data:
+; tourney_year_id,tourney_order,tourney_slug,tourney_url_suffix,tourney_round_name,round_order,match_order,winner_name,winner_player_id,winner_slug,loser_name,loser_player_id,loser_slug,winner_seed,loser_seed,match_score_tiebreaks,winner_sets_won,loser_sets_won,winner_games_won,loser_games_won,winner_tiebreaks_won,loser_tiebreaks_won,match_id,match_stats_url_suffix
+; 1968-580,1,australian-open,/en/scores/archive/australian-open/580/1968/results,Finals,1,1,Bill Bowrey,b224,bill-bowrey,Juan Gisbert Sr,g076,juan-gisbert-sr,1,2,75 26 97 64,3,1,24,22,0,0,1968-580-b224-g076,
+
+(defn win-loss-by-player [csv]
+  (with-open [r (io/reader csv)]
+    (->> (csv/read-csv r)
+         sc/mappify
+
+         (reduce (fn [acc {:keys [winner_slug loser_slug]}]
+                   (-> acc
+                       (update-in [winner_slug :wins]
+                                  (fn [wins] (inc (or wins 0))))
+
+                       (update-in [loser_slug :losses]
+                                  (fn [losses] (inc (or losses 0))))))
+
+                 {} ; an empty map as an accumulator
+                 ))))
+
+; E.g. updating acc for "Roger Federer":
+; (update-in acc ["roger-federer" :wins] (fn [wins] (inc (or wins 0))))
+
+(def w-l (win-loss-by-player "match_scores_1991-2016_unindexed_csv.csv"))
+
+(println (get w-l "roger-federer"))
+
+
+; ELO
+
+; A function implementing the formula for calculating the probability of a player defeating another player:
+(defn match-probability
+  [player-1-rating player-2-rating]
+  (/ 1
+     (+ 1
+        (math/expt 10 (/ (- player-2-rating player-1-rating) 400)))))
+
+(println (match-probability 700 1000))
+(println (match-probability 1000 700))
+
+; Define a k-factor var and a function that encapsulates the equation for updating a player's rating after a match:
+(def k-factor 32)
+
+(defn recalculate-rating [previous-rating expected-outcome real-outcome]
+  (+ previous-rating (* k-factor (- real-outcome expected-outcome))))
+
+; Calculate new rating when player rated at 1500 loses to player rated 1400
+(println (recalculate-rating 1500 (match-probability 1500 1400) 0)) ; 0 as in the player being recalcuated lost

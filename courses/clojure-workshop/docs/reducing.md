@@ -181,3 +181,102 @@ and again:
  :appetizer [{:name "Celery", :course :appetizer}]}
 ```
 
+## An Exercise
+
+Suppose that for each tennis player, we need to know the number of matches played, won, and lost. We'll walk through two different ways to solve the problem in Clojure (reading a CSV file of matches).
+
+The first using reduce and the second using group-by, one of Clojure's many convenient reduce-based functions.
+
+NOTE - We will not have to call **doall** since **reduce** is not lazy.
+
+Example data:
+
+tourney_year_id,tourney_order,tourney_slug,tourney_url_suffix,tourney_round_name,round_order,match_order,winner_name,winner_player_id,winner_slug,loser_name,loser_player_id,loser_slug,winner_seed,loser_seed,match_score_tiebreaks,winner_sets_won,loser_sets_won,winner_games_won,loser_games_won,winner_tiebreaks_won,loser_tiebreaks_won,match_id,match_stats_url_suffix
+
+1968-580,1,australian-open,/en/scores/archive/australian-open/580/1968/results,Finals,1,1,Bill Bowrey,b224,bill-bowrey,Juan Gisbert Sr,g076,juan-gisbert-sr,1,2,75 26 97 64,3,1,24,22,0,0,1968-580-b224-g076,
+
+Another note regarding **update-in** (as it can be confusing):
+
+(update-in m ks f & args)
+
+Updates a value in a nested associative structure, where **ks** is a sequence of keys and **f** is a function that will take the old value and any supplied args and return the new value, and returns a new nested structure. If any levels do not exist, hash-maps will be created.
+
+```clojure
+(defn win-loss-by-player [csv]
+  (with-open [r (io/reader csv)]
+    (->> (csv/read-csv r)
+         sc/mappify
+
+         (reduce (fn [acc {:keys [winner_slug loser_slug]}]
+                   (-> acc
+                       (update-in [winner_slug :wins]
+                                  (fn [wins] (inc (or wins 0))))
+
+                       (update-in [loser_slug :losses]
+                                  (fn [losses] (inc (or losses 0))))))
+
+                 {} ; an empty map as an accumulator
+                 ))))
+
+; E.g. updating acc for "Roger Federer":
+; (update-in acc ["roger-federer" :wins] (fn [wins] (inc (or wins 0))))
+
+(def w-l (win-loss-by-player "match_scores_1991-2016_unindexed_csv.csv"))
+
+(get w-l "roger-federer")
+=> {:losses 240, :wins 1050}
+```
+
+*We need to use* **get** *here because the keys in our map are strings. If we had used the* **keyword** *function to convert the player "slugs" when building up the map, we could access a player's data with* **(:roger-federer w-l)** *instead.*
+
+## Rating System
+
+The **ELO** rating system can be used for say any sport - we'll use it for tennis. The formula is:
+
+![ELO](images/elo.png)
+
+*P*1 and *P*2 here are the probabilities of winning for player one and player two. *R*1 and *R*2 are their respective ratings before the match.
+
+Example: If we fill in the values for a match between a player, rated at 700, and a stronger player, rated at 1,000, we get the following results:
+
+![ELO example](images/elo-example.png)
+
+The *P*1 value indicates that there is a 15% chance that the weaker player will win the match and an 85% chance that the stronger player will win. 
+
+```clojure
+; A function implementing the formula for calculating the probability of a player defeating another player:
+(defn match-probability
+  [player-1-rating player-2-rating]
+  (/ 1
+     (+ 1
+        (math/expt 10 (/ (- player-2-rating player-1-rating) 400)))))
+
+(match-probability 700 1000)
+=> 0.15097955721132328
+
+(match-probability 1000 700)
+=> 0.8490204427886767
+```
+
+This equation shows how the player's score is updated after a match:
+
+![ELO update](images/elo-update.png)
+
+A player's new rating (*R'*) is based on their previous rating (*R*), the match score (*S*), the expected score (*ES*), and the *K* factor.
+
+The score (*S*) of a tennis match is either 0, for a loss, or 1, for a victory. If a player is expected to win by a probability of 0.75 and they go on to win their match, then the (*S* - *ES*) part of the equation works out to 1 - 0.75 = 0.25. This result gets multiplied by what the Elo system calls the "*K* factor." The *K* factor determines the impact of a match result on a player's overall rating. A high *K* factor means ratings will move around a lot; a low *K* factor means they will be more stable. If we use a *K* factor of 32, that gives us 32 * 0.25 = 8, so the player's rating in this example would go up by eight points. If the player had lost instead, we would get 32 * (0 - 0.75) = -24. Once again, unexpected results thus have a much greater impact on ratings.
+
+```clojure
+; A k-factor var and a function that encapsulates the equation for updating a player's rating after a match:
+(def k-factor 32)
+
+(defn recalculate-rating [previous-rating expected-outcome real-outcome]
+  (+ previous-rating (* k-factor (- real-outcome expected-outcome))))
+```
+
+```clojure
+; Calculate new rating when player rated at 1500 loses to player rated 1400
+(recalculate-rating 1500 (match-probability 1500 1400) 0) ; 0 as in the player being recalcuated lost
+=> 1479.5179200063076
+```
+
