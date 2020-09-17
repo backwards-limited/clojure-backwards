@@ -11,4 +11,7 @@
 - [Higher Order Functions](docs/higher-order-functions.md)
 - [Mapping & Filtering](docs/mapping-filtering.md)
 - [Reducing](docs/reducing.md)
+- [Recursion](docs/recursion.md)
+- [HTML](docs/html.md)
+- [Lazy Sequences](docs/lazy-sequences.md)
 
