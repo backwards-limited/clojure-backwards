@@ -25,3 +25,9 @@ To get started on the command line with a REPL:
 ```bash
 clj
 ```
+
+Optional installations:
+
+```bash
+brew install bat
+```

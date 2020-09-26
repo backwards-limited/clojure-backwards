@@ -14,4 +14,6 @@
 - [Recursion](docs/recursion.md)
 - [HTML](docs/html.md)
 - [Lazy Sequences](docs/lazy-sequences.md)
+- [Namespace](docs/namespace.md)
+- [Leiningen](docs/leiningen.md)
 
