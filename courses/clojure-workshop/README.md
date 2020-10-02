@@ -16,4 +16,5 @@
 - [Lazy Sequences](docs/lazy-sequences.md)
 - [Namespace](docs/namespace.md)
 - [Leiningen](docs/leiningen.md)
+- [Host Platform](docs/host-platform.md)
 

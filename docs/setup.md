@@ -20,10 +20,20 @@ and in future, to upgrade:
 brew upgrade clojure/tools/clojure
 ```
 
+For ClojureScript:
+
+```bash
+brew install planck
+```
+
 To get started on the command line with a REPL:
 
 ```bash
 clj
+```
+
+```bash
+planck
 ```
 
 Optional installations:
