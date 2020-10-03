@@ -17,4 +17,5 @@
 - [Namespace](docs/namespace.md)
 - [Leiningen](docs/leiningen.md)
 - [Host Platform](docs/host-platform.md)
+- [Testing](docs/testing.md)
 
