@@ -336,3 +336,67 @@ More in depth property test:
                             (calculate-coffee-price price-hash (first coffee-tuple) int)))))
 ```
 
+## Testing in ClojureScript
+
+In ClojureScript, we have a port of **clojure.test** in the form of **cljs.test**.
+
+Regarding **asynchronous** code, ClojureScript sits on top of JavaScript which is single threaded and works with **callbacks**.
+
+ClojureScript provides the **core.async** library for working with asynchronous code. The **core.async** library has a number of functions and macros:
+
+- **go**: Creates a block that marks the code as asynchronous. The result from the block is put on a channel.
+- **<!**: Takes a value from a channel.
+
+Within this project, we have the sub-module [clojurescript-testing](../../../clojurescript-testing) where the project has the **dependencies**:
+
+```clojure
+:dependencies [[org.clojure/clojure "1.10.1"]
+                 [org.clojure/clojurescript "1.10.520"]
+                 [cljs-http "0.1.46"]
+                 [org.clojure/test.check "0.10.0"]
+                 [funcool/cuerdas "2.2.0"]]
+:plugins [[lein-doo "0.1.11"]]
+```
+
+The **cljs-http** library will allow us to make HTTP calls. We will use **GET** requests to make asynchronous calls that will be tested. The **cuerdas** library has many string utility functions.
+
+The **lein-doo** plugin will be used to run ClojureScript tests.
+
+While Maven hosts Java projects, npm hosts JavaScript projects. Install **Karma** with **npm**:
+
+```bash
+clojure-backwards/clojurescript-testing
+➜ npm install karma karma-cljs-test --save-dev
+```
+
+Install the Chrome Karama launcher. Our tests will be run (launched) in the Chrome browser:
+
+```bash
+clojure-backwards/clojurescript-testing
+➜ npm install karma-chrome-launcher --save-dev
+```
+
+Install the Karma command-line tool:
+
+```bash
+clojure-backwards/clojurescript-testing
+➜ npm install -g karma-cli
+```
+
+We also set the build configuration for the test task in the **project.clj** file:
+
+```clojure
+:cljsbuild {:builds
+              {:test {:source-paths ["src" "test"]
+                      :compiler {:output-to "out/tests.js"
+                                 :output-dir "out"
+                                 :main clojurescript-testing.runner
+                                 :optimizations :none}}}}
+```
+
+Launch the test runner:
+
+```bash
+lein doo chrome test
+```
+
